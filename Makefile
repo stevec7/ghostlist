@@ -2,7 +2,7 @@
 
 build:
 	mkdir -p dist
-	go build -v -x -o dist/ghostlist cmd/ghostlist/main.go
+	go build -v -o dist/ghostlist cmd/ghostlist/main.go
 
 clean:
 	rm dist/ghostlist
