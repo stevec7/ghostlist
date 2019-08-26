@@ -265,38 +265,3 @@ func sortHostlist(hostlist *[]string) error {
 
 	return nil
 }
-
-/*
-func main() {
-	a, err := ExpandRangeList("host", "1-7,10")
-	if err != nil {
-		fmt.Println("Error")
-	}
-	fmt.Println("a: ", a)
-	b, err := ExpandPart("x[1-2]y[1-3][1-3]")
-	if err != nil {
-		fmt.Println("Error")
-	}
-	fmt.Println("b: ", b)
-	fmt.Println("len(b): ", len(b))
-
-	//c, err := ExpandHostList("n[9-11],d[01-02]")
-	c, err := ExpandHostList("host0[100-102],x[500-503],host0100,host0115,host0116,d[01-05,07],host0116")
-	if err != nil {
-		fmt.Println("Error: ", err)
-	}
-	fmt.Println("c: ", c)
-
-	d := removeDups(c)
-	//sort.Strings(d)
-	err = sortHostlist(&d)
-
-	if err != nil {
-		fmt.Println("He didnt fly so good")
-	}
-	fmt.Println("removed dupes: ", d)
-	fmt.Println("sorted: ", d)
-	//c, _ := ExpandRangeList("y[1-3][1-3]")
-	//fmt.Println("c: ", c)
-}
-*/
