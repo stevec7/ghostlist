@@ -1,4 +1,4 @@
-package main
+package ghostlist
 
 import (
 	"errors"
@@ -265,6 +265,7 @@ func sortHostlist(hostlist *[]string) error {
 	return nil
 }
 
+/*
 func main() {
 	a, err := ExpandRangeList("host", "1-7,10")
 	if err != nil {
@@ -297,3 +298,4 @@ func main() {
 	//c, _ := ExpandRangeList("y[1-3][1-3]")
 	//fmt.Println("c: ", c)
 }
+*/
