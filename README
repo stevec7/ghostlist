@@ -1,0 +1,5 @@
+This is pretty much a direct port of this:
+
+https://www.nsc.liu.se/~kent/python-hostlist/
+
+I don't know if I care about re-creating the cmdline utilities, I just want to be able to expand host list ranges.
