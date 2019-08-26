@@ -1,7 +1,7 @@
 package ghostlist_test
 
 import (
-	"github.com/stevec7/ghostlist"
+	"github.com/stevec7/ghostlist/pkg/ghostlist"
 	"testing"
 )
 
@@ -35,7 +35,7 @@ func TestEHLNoPadding(t *testing.T) {
 		t.Errorf("Hostlist was wrong, expected: (%v), got: (%v_", b, a)
 	}
 }
-
+*/
 func TestEHLPadding(t *testing.T) {
 	a, _ := ghostlist.ExpandHostList("n[09-11],d[01-02]")
 	b := []string{"d01" ,"d02", "n09", "n10", "n11"}
@@ -44,7 +44,6 @@ func TestEHLPadding(t *testing.T) {
 		t.Errorf("Hostlist was wrong, expected: (%v), got: (%v_", b, a)
 	}
 }
- */
 
 func TestEHLComplex(t *testing.T) {
 	a, _ := ghostlist.ExpandHostList("x[1-2]y[1-3][001-004]")
