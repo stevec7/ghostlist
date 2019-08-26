@@ -18,6 +18,7 @@ We start grouping from the rightmost numerical part.
 Duplicates are removed.
  */
 func CollectHostList(hostlist []string) (string, error) {
+	return "", errors.New("Doesn't work yet")
 	var leftRight []string
 
 	for _, host := range hostlist {
@@ -43,7 +44,7 @@ func CollectHostList(hostlist []string) (string, error) {
 	}
 	var results []string
 	for l, r := range leftRight {
-		s := fmt.Sprintf("%s%s", l, r)
+		s := fmt.Sprintf("%d%s", l, r)
 		results = append(results, s)
 	}
 	return strings.Join(results, ","), nil
@@ -64,7 +65,7 @@ func CollectHostListOne(leftRight []string) ([]string, bool){
 	for _, lr := range leftRight {
 		left := lr[0]
 		right := lr[1]
-		host := fmt.Sprintf("%s%s", left, right)
+		host := fmt.Sprintf("%s%s", string(left), string(right))
 		remaining = append(remaining, host)
 
 		re := regexp.MustCompile(`^(.*?)([0-9]+)?([^0-9]*)$`)
@@ -73,7 +74,7 @@ func CollectHostListOne(leftRight []string) ([]string, bool){
 		numStr := groups[2]
 		suffix := groups[3]
 
-		suffix = fmt.Sprintf("%s%s", suffix, right)
+		suffix = fmt.Sprintf("%s%s", suffix, string(right))
 
 		if numStr == "" {
 			fmt.Println("What the heck...")
@@ -91,8 +92,8 @@ func CollectHostListOne(leftRight []string) ([]string, bool){
 		}
 	}
 
-	var results []string
-	needsAnotherLoop := false
+	//var results []string
+	//needsAnotherLoop := false
 
 
 	return []string{"a", "b", "c"}, true
