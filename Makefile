@@ -6,3 +6,8 @@ build:
 
 clean:
 	rm dist/ghostlist
+
+test:
+	cd pkg/ghostlist && go test || (echo "Tests failed"; exit 1)
+
+all: test build
