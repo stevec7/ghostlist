@@ -18,14 +18,32 @@ func equal(a, b []string) bool {
 	return true
 }
 
+func TestCHL(t *testing.T) {
+    //a, _ := ghostlist.CollectHostList([]string{"host1", "host2", "host3"})
+    //a, _ := ghostlist.CollectHostList([]string{"host1-1-2", "host1-1-3", "host3", "host5"})
+    a, _ := ghostlist.CollectHostList([]string{"host2-3", "host1-1-2", "host1-1-3", "host1-1-4", 
+		"host3", "host5", "hostname12.local"})
+    b := "host[1-3]"
+
+    r := a == b
+    if !r {
+		t.Errorf("Hostlist was wrong, expected: (%v), got: (%v)", b, a)
+    }
+
+	//if !equal(a, b) {
+	//	t.Errorf("Hostlist was wrong, expected: (%v), got: (%v)", b, a)
+	//}
+}
+
 func TestERL(t *testing.T) {
-	a, _:= ghostlist.ExpandRangeList("host", "1-2,10")
+	a, _ := ghostlist.ExpandRangeList("host", "1-2,10")
 	b := []string{"host1", "host2", "host10"}
 
 	if !equal(a, b) {
-		t.Errorf("Hostlist was wrong, expected: (%v), got: (%v_", b, a)
+		t.Errorf("Hostlist was wrong, expected: (%v), got: (%v)", b, a)
 	}
 }
+
 /*
 func TestEHLNoPadding(t *testing.T) {
 	a, _ := ghostlist.ExpandHostList("n[9-11],d[01-02]")
@@ -38,10 +56,10 @@ func TestEHLNoPadding(t *testing.T) {
 */
 func TestEHLPadding(t *testing.T) {
 	a, _ := ghostlist.ExpandHostList("n[09-11],d[01-02]")
-	b := []string{"d01" ,"d02", "n09", "n10", "n11"}
+	b := []string{"d01", "d02", "n09", "n10", "n11"}
 
 	if !equal(a, b) {
-		t.Errorf("Hostlist was wrong, expected: (%v), got: (%v_", b, a)
+		t.Errorf("Hostlist was wrong, expected: (%v), got: (%v)", b, a)
 	}
 }
 
@@ -52,6 +70,6 @@ func TestEHLComplex(t *testing.T) {
 		"x2y2002", "x2y2003", "x2y2004", "x2y3001", "x2y3002", "x2y3003", "x2y3004"}
 
 	if !equal(a, b) {
-		t.Errorf("Hostlist was wrong, expected: (%v), got: (%v_", b, a)
+		t.Errorf("Hostlist was wrong, expected: (%v), got: (%v)", b, a)
 	}
 }

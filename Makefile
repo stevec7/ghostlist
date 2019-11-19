@@ -1,8 +1,9 @@
+VERSION=$(shell git describe --always --long --dirty)
 .PHONY: all clean
 
 build:
 	mkdir -p dist
-	go build -v -o dist/ghostlist cmd/ghostlist/main.go
+	go build -v -ldflags="-X 'github.com/stevec7/ghostlist/cmd/ghostlist/version.version=${VERSION}'" -o dist/ghostlist cmd/ghostlist/main.go
 
 clean:
 	rm dist/ghostlist

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
+    "github.com/golang-collections/collections/set"
 )
 
 const MAX_SIZE int = 100000
@@ -16,10 +16,11 @@ Collect a hostlist string from a string slice of hosts.
 
 We start grouping from the rightmost numerical part.
 Duplicates are removed.
- */
+*/
 func CollectHostList(hostlist []string) (string, error) {
-	return "", errors.New("Doesn't work yet")
-	var leftRight []string
+	var leftRight []leftRightRec
+
+	hostlist = removeDups(hostlist)
 
 	for _, host := range hostlist {
 		s := strings.TrimSpace(host)
@@ -32,8 +33,8 @@ func CollectHostList(hostlist []string) (string, error) {
 			return "", errors.New("Forbidden characters in host list, [][,]")
 		}
 
-		lr := []string{s, ""}
-		leftRight = append(leftRight, lr...)
+        rec := leftRightRec{l: s, r: ""}
+		leftRight = append(leftRight, rec)
 	}
 	looping := true
 	for {
@@ -43,12 +44,14 @@ func CollectHostList(hostlist []string) (string, error) {
 		}
 	}
 	var results []string
-	for l, r := range leftRight {
-		s := fmt.Sprintf("%d%s", l, r)
+	for _, i := range leftRight {
+		s := fmt.Sprintf("%s%s", i.l, i.r)
 		results = append(results, s)
 	}
 	return strings.Join(results, ","), nil
 }
+
+
 
 /*
 Collect a hostlist string from a list of hosts (left+right).
@@ -56,47 +59,99 @@ Collect a hostlist string from a list of hosts (left+right).
 The input is a list of tuples (left, right). The left part
 is analyzed, while the right part is just passed along
 (it can contain already collected range expressions).
- */
-func CollectHostListOne(leftRight []string) ([]string, bool){
-	//var sortList []string
-	var sortList []interface{}
-	var remaining  []string	//ill handle the set stuff after by just removing the dupes
+*/
+func CollectHostListOne(leftRight []leftRightRec) ([]leftRightRec, bool) {
+	var sL []sortListT
+	//var remaining []string //ill handle the set stuff after by just removing the dupes
+	remaining := set.New()
 
 	for _, lr := range leftRight {
-		left := lr[0]
-		right := lr[1]
+		left := lr.l
+		right := lr.r
 		host := fmt.Sprintf("%s%s", string(left), string(right))
-		remaining = append(remaining, host)
+        remaining.Insert(host)
 
 		re := regexp.MustCompile(`^(.*?)([0-9]+)?([^0-9]*)$`)
 		groups := re.FindStringSubmatch(string(left))
-		prefix := groups[1]
+		pre := groups[1]
 		numStr := groups[2]
-		suffix := groups[3]
+		suf := groups[3]
 
-		suffix = fmt.Sprintf("%s%s", suffix, string(right))
+		suf = fmt.Sprintf("%s%s", suf, string(right))
 
 		if numStr == "" {
-			fmt.Println("What the heck...")
-			s1 := []interface{}{prefix, nil}
-			s2 := []interface{}{nil, nil, host}
-			s3 := []interface{}{s1, s2}
-			sortList = append(sortList, s3)
+            tmp := sortListT{
+                // i am using "None" here because the stupid python version uses None, and
+                //  go doesn't allow nil string assignment
+                preSuf: prefixSuffix{prefix: pre, suffix: "None"},
+                numInt: 0,
+                numWidth: 0,
+                host: host,
+            }
+			sL = append(sL, tmp)
 		} else {
-			numInt, _ := strconv.Atoi(numStr)
-			numWidth := len(numStr)
-			s1 := []string{prefix, suffix}
-			s2 := []interface{}{numInt, numWidth, host}
-			s3 := []interface{}{s1, s2}
-			sortList = append(sortList, s3)
+			numI, _ := strconv.Atoi(numStr)
+			numW := len(numStr)
+            sL = append(sL, sortListT{
+                preSuf: prefixSuffix{prefix: pre, suffix: suf},
+                numInt: numI,
+                numWidth: numW,
+                host: host,
+            })
+
 		}
 	}
 
-	//var results []string
-	//needsAnotherLoop := false
+    // TODO: need to figure out a nice way to sort in place, using the prefix, and then the suffix
 
+    needsAnotherLoop := false
 
-	return []string{"a", "b", "c"}, true
+    var results []leftRightRec
+    for _, g := range groupBy(sL) {
+        if g.preSuf.suffix == "None" {
+            results = append(results, leftRightRec{l: "", r: g.preSuf.prefix})
+            remaining.Remove(g.preSuf.prefix)
+        } else {
+            var rL []rangeList
+            for _, m := range g.members {
+                if ok := remaining.Has(m.host); !ok {
+                    continue
+                }
+
+				numInt := m.numInt
+                low := m.numInt
+                for {
+                    newhost := fmt.Sprintf("%s%0*d%s", m.preSuf.prefix, m.numWidth,
+						m.numInt, m.preSuf.suffix)
+                    if ok := remaining.Has(newhost); ok {
+                        remaining.Remove(newhost)
+                        numInt += 1
+                    } else {
+                        break
+                    }
+                }
+                high := numInt - 1
+                rL = append(rL, rangeList{low, high, m.numWidth})
+
+            }
+            needsAnotherLoop = true
+            if len(rL) == 1 && rL[0].low == rL[0].high {
+                results = append(results, leftRightRec{l: g.preSuf.prefix,
+					r: fmt.Sprintf("%0*d%s", rL[0].numWidth, rL[0].low, g.preSuf.suffix)})
+            } else {
+                var tmp []string
+                for _, i := range rL {
+                    tmp = append(tmp, formatRange(i.low, i.high, i.numWidth))
+                }
+                results = append(results, leftRightRec{l: g.preSuf.prefix,
+					r: fmt.Sprintf("[%s]%s", strings.Join(tmp, ","), g.preSuf.suffix) })
+            }
+        }
+    }
+
+	needsAnotherLoop = false
+
+    return results, needsAnotherLoop
 }
 
 /*
@@ -158,7 +213,7 @@ func ExpandHostList(hostlist string) ([]string, error) {
 }
 
 // Expand a part (e.g. "x[1-2]y[1-3][1-3]") (no outer level commas).
-func ExpandPart(s string) ([]string, error){
+func ExpandPart(s string) ([]string, error) {
 	if s == "" {
 		return []string{""}, nil
 	}
@@ -239,29 +294,10 @@ func ExpandRange(prefix, rng string) ([]string, error) {
 	}
 
 	var results []string
-	for i := low; i < high + 1; i++ {
+	for i := low; i < high+1; i++ {
 		s := fmt.Sprintf("%s%0*d", prefix, width, i)
 		results = append(results, s)
 	}
 
 	return results, nil
-}
-
-func removeDups(hostlist []string) ([]string) {
-	// this is tedious, and/or i am dumb
-	m := make(map[string]int, len(hostlist))
-	for i, v := range hostlist {
-		m[v] = i
-	}
-	var keys []string
-	for k, _ := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-func sortHostlist(hostlist *[]string) error {
-	sort.Strings(*hostlist)
-
-	return nil
 }
