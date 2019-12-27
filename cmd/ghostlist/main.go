@@ -11,7 +11,8 @@ import (
 )
 
 func main() {
-	expandP := flag.String("e", "host00[1-3]", "Expand the hostlist")
+	collapseP := flag.String("c", "", "Collapse the hostlist, e.g. host1,host2,host3")
+	expandP := flag.String("e", "", "Expand the hostlist, e.g. host[1-3]")
 	showVersion := flag.Bool("V", false, "show the version")
 	flag.Parse()
 
@@ -20,11 +21,22 @@ func main() {
 		os.Exit(0)
 	}
 
-	result, err := ghostlist.ExpandHostList(*expandP)
+	if *expandP != "" {
+		result, err := ghostlist.ExpandHostList(*expandP)
+		if err != nil {
+			log.Fatalf("Error: %s\n", err)
+		}
 
-	if err != nil {
-		log.Fatalf("Error: %s", err)
+		fmt.Printf("%v\n", strings.Join(result, ","))
+	} else if *collapseP != "" {
+		result, err := ghostlist.CollectHostList(*collapseP)
+		if err != nil {
+			log.Fatalf("Error: %s\n", err)
+		}
+		fmt.Printf("%s\n", result)
+	} else {
+		log.Fatalf("You must enter a value for the [-c|-e] args")
 	}
 
-	fmt.Printf("%v\n", strings.Join(result, ","))
+
 }

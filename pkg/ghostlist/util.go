@@ -2,6 +2,7 @@ package ghostlist
 
 import (
     "fmt"
+    "sort"
 )
 
 func formatRange(low, high, width int) string {
@@ -44,5 +45,6 @@ func removeDups(hostlist []string) []string {
 	for k, _ := range m {
 		keys = append(keys, k)
 	}
+    sort.Strings(keys)
 	return keys
 }

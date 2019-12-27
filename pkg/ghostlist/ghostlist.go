@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
     "github.com/golang-collections/collections/set"
@@ -17,12 +18,16 @@ Collect a hostlist string from a string slice of hosts.
 We start grouping from the rightmost numerical part.
 Duplicates are removed.
 */
-func CollectHostList(hostlist []string) (string, error) {
+func CollectHostList(hostlist string) (string, error) {
 	var leftRight []leftRightRec
+	hosts := []string{}
 
-	hostlist = removeDups(hostlist)
+	for _, i := range strings.Split(hostlist, ",") {
+		hosts = append(hosts, i)
+	}
+	hosts = removeDups(hosts)
 
-	for _, host := range hostlist {
+	for _, host := range hosts {
 		s := strings.TrimSpace(host)
 		if host == "" {
 			continue
@@ -38,7 +43,7 @@ func CollectHostList(hostlist []string) (string, error) {
 	}
 	looping := true
 	for {
-		leftRight, looping = CollectHostListOne(leftRight)
+		leftRight, looping = collectHostListOne(leftRight)
 		if !looping {
 			break
 		}
@@ -48,6 +53,7 @@ func CollectHostList(hostlist []string) (string, error) {
 		s := fmt.Sprintf("%s%s", i.l, i.r)
 		results = append(results, s)
 	}
+	sort.Strings(results)
 	return strings.Join(results, ","), nil
 }
 
@@ -60,9 +66,8 @@ The input is a list of tuples (left, right). The left part
 is analyzed, while the right part is just passed along
 (it can contain already collected range expressions).
 */
-func CollectHostListOne(leftRight []leftRightRec) ([]leftRightRec, bool) {
+func collectHostListOne(leftRight []leftRightRec) ([]leftRightRec, bool) {
 	var sL []sortListT
-	//var remaining []string //ill handle the set stuff after by just removing the dupes
 	remaining := set.New()
 
 	for _, lr := range leftRight {
@@ -103,7 +108,6 @@ func CollectHostListOne(leftRight []leftRightRec) ([]leftRightRec, bool) {
 	}
 
     // TODO: need to figure out a nice way to sort in place, using the prefix, and then the suffix
-
     needsAnotherLoop := false
 
     var results []leftRightRec
@@ -113,6 +117,7 @@ func CollectHostListOne(leftRight []leftRightRec) ([]leftRightRec, bool) {
             remaining.Remove(g.preSuf.prefix)
         } else {
             var rL []rangeList
+			e := 0
             for _, m := range g.members {
                 if ok := remaining.Has(m.host); !ok {
                     continue
@@ -120,18 +125,21 @@ func CollectHostListOne(leftRight []leftRightRec) ([]leftRightRec, bool) {
 
 				numInt := m.numInt
                 low := m.numInt
+				k := 0
                 for {
                     newhost := fmt.Sprintf("%s%0*d%s", m.preSuf.prefix, m.numWidth,
-						m.numInt, m.preSuf.suffix)
+						numInt, m.preSuf.suffix)
                     if ok := remaining.Has(newhost); ok {
                         remaining.Remove(newhost)
                         numInt += 1
                     } else {
                         break
                     }
+					k += 1
                 }
                 high := numInt - 1
                 rL = append(rL, rangeList{low, high, m.numWidth})
+				e += 1
 
             }
             needsAnotherLoop = true
@@ -150,7 +158,6 @@ func CollectHostListOne(leftRight []leftRightRec) ([]leftRightRec, bool) {
     }
 
 	needsAnotherLoop = false
-
     return results, needsAnotherLoop
 }
 

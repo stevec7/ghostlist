@@ -1,8 +1,9 @@
 package ghostlist_test
 
 import (
-	"github.com/stevec7/ghostlist/pkg/ghostlist"
 	"testing"
+
+	"github.com/stevec7/ghostlist/pkg/ghostlist"
 )
 
 func equal(a, b []string) bool {
@@ -19,20 +20,41 @@ func equal(a, b []string) bool {
 }
 
 func TestCHL(t *testing.T) {
-    //a, _ := ghostlist.CollectHostList([]string{"host1", "host2", "host3"})
-    //a, _ := ghostlist.CollectHostList([]string{"host1-1-2", "host1-1-3", "host3", "host5"})
-    a, _ := ghostlist.CollectHostList([]string{"host2-3", "host1-1-2", "host1-1-3", "host1-1-4", 
-		"host3", "host5", "hostname12.local"})
-    b := "host[1-3]"
-
+	// simple
+    a, _ := ghostlist.CollectHostList("test1,test2,test3")
+    b := "test[1-3]"
     r := a == b
     if !r {
 		t.Errorf("Hostlist was wrong, expected: (%v), got: (%v)", b, a)
     }
 
-	//if !equal(a, b) {
-	//	t.Errorf("Hostlist was wrong, expected: (%v), got: (%v)", b, a)
-	//}
+	// test intermediate range
+    a, _ = ghostlist.CollectHostList("test1-2-3,test1-2-4,test1-2-5,test1-2-7")
+    b = "test1-2-[3-5,7]"
+    r = a == b
+    if !r {
+		t.Errorf("Hostlist was wrong, expected: (%v), got: (%v)", b, a)
+    }
+
+	// test intermediate range with different middles
+    a, _ = ghostlist.CollectHostList(`test1-2-3,test1-2-4,test1-2-5,test1-2-7,
+		test1-3-12,test1-3-14,test1-3-15,test1-3-16`)
+    b = "test1-2-[3-5,7],test1-3-[12,14-16]"
+    r = a == b
+    if !r {
+		t.Errorf("Hostlist was wrong, expected: (%v), got: (%v)", b, a)
+    }
+
+	// test jumble of random junk
+	a, _ = ghostlist.CollectHostList(`test0001,test0002,test0003,test04,test05,
+		test07-01,test07-02,test-07-02-01,test07-02-02,test07-02-03,
+		test07-001,test07-002,test07-001-001,test07-002-002,test1000,test2001,test3002`)
+	// love you long line
+    b = "test-07-02-01,test07-001-001,test07-002-002,test07-02-[02-03],test07-[001-002,01-02],test[0001-0003,04-05,1000,2001,3002]"
+    r = a == b
+    if !r {
+		t.Errorf("Hostlist was wrong, expected: (%v), got: (%v)", b, a)
+	}
 }
 
 func TestERL(t *testing.T) {
