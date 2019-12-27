@@ -117,7 +117,6 @@ func collectHostListOne(leftRight []leftRightRec) ([]leftRightRec, bool) {
             remaining.Remove(g.preSuf.prefix)
         } else {
             var rL []rangeList
-			e := 0
             for _, m := range g.members {
                 if ok := remaining.Has(m.host); !ok {
                     continue
@@ -125,7 +124,6 @@ func collectHostListOne(leftRight []leftRightRec) ([]leftRightRec, bool) {
 
 				numInt := m.numInt
                 low := m.numInt
-				k := 0
                 for {
                     newhost := fmt.Sprintf("%s%0*d%s", m.preSuf.prefix, m.numWidth,
 						numInt, m.preSuf.suffix)
@@ -135,12 +133,9 @@ func collectHostListOne(leftRight []leftRightRec) ([]leftRightRec, bool) {
                     } else {
                         break
                     }
-					k += 1
                 }
                 high := numInt - 1
                 rL = append(rL, rangeList{low, high, m.numWidth})
-				e += 1
-
             }
             needsAnotherLoop = true
             if len(rL) == 1 && rL[0].low == rL[0].high {
