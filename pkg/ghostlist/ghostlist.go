@@ -7,24 +7,22 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-    "github.com/golang-collections/collections/set"
+
+	"github.com/golang-collections/collections/set"
 )
 
-const MAX_SIZE int = 100000
+// MaxSize is the maximum number of entries in a hostrange
+const MaxSize int = 100000
 
-/*
-Collect a hostlist string from a string slice of hosts.
-
-We start grouping from the rightmost numerical part.
-Duplicates are removed.
-*/
-func CollectHostList(hostlist string) (string, error) {
+// CollectHostList converts a slice of hostlist strings into a single
+//	pdsh style compressed hostlist string
+//
+//We start grouping from the rightmost numerical part.
+//
+//Duplicates are removed.
+func CollectHostList(hosts []string) (string, error) {
 	var leftRight []leftRightRec
-	hosts := []string{}
 
-	for _, i := range strings.Split(hostlist, ",") {
-		hosts = append(hosts, i)
-	}
 	hosts = removeDups(hosts)
 
 	for _, host := range hosts {
@@ -38,7 +36,7 @@ func CollectHostList(hostlist string) (string, error) {
 			return "", errors.New("Forbidden characters in host list, [][,]")
 		}
 
-        rec := leftRightRec{l: s, r: ""}
+		rec := leftRightRec{l: s, r: ""}
 		leftRight = append(leftRight, rec)
 	}
 	looping := true
@@ -57,8 +55,6 @@ func CollectHostList(hostlist string) (string, error) {
 	return strings.Join(results, ","), nil
 }
 
-
-
 /*
 Collect a hostlist string from a list of hosts (left+right).
 
@@ -74,7 +70,7 @@ func collectHostListOne(leftRight []leftRightRec) ([]leftRightRec, bool) {
 		left := lr.l
 		right := lr.r
 		host := fmt.Sprintf("%s%s", string(left), string(right))
-        remaining.Insert(host)
+		remaining.Insert(host)
 
 		re := regexp.MustCompile(`^(.*?)([0-9]+)?([^0-9]*)$`)
 		groups := re.FindStringSubmatch(string(left))
@@ -85,85 +81,84 @@ func collectHostListOne(leftRight []leftRightRec) ([]leftRightRec, bool) {
 		suf = fmt.Sprintf("%s%s", suf, string(right))
 
 		if numStr == "" {
-            tmp := sortListT{
-                // i am using "None" here because the stupid python version uses None, and
-                //  go doesn't allow nil string assignment
-                preSuf: prefixSuffix{prefix: pre, suffix: "None"},
-                numInt: 0,
-                numWidth: 0,
-                host: host,
-            }
+			tmp := sortListT{
+				// i am using "None" here because the stupid python version uses None, and
+				//  go doesn't allow nil string assignment
+				preSuf:   prefixSuffix{prefix: pre, suffix: "None"},
+				numInt:   0,
+				numWidth: 0,
+				host:     host,
+			}
 			sL = append(sL, tmp)
 		} else {
 			numI, _ := strconv.Atoi(numStr)
 			numW := len(numStr)
-            sL = append(sL, sortListT{
-                preSuf: prefixSuffix{prefix: pre, suffix: suf},
-                numInt: numI,
-                numWidth: numW,
-                host: host,
-            })
+			sL = append(sL, sortListT{
+				preSuf:   prefixSuffix{prefix: pre, suffix: suf},
+				numInt:   numI,
+				numWidth: numW,
+				host:     host,
+			})
 
 		}
 	}
 
-    // TODO: need to figure out a nice way to sort in place, using the prefix, and then the suffix
-    needsAnotherLoop := false
+	// TODO: need to figure out a nice way to sort in place, using the prefix, and then the suffix
+	needsAnotherLoop := false
 
-    var results []leftRightRec
-    for _, g := range groupBy(sL) {
-        if g.preSuf.suffix == "None" {
-            results = append(results, leftRightRec{l: "", r: g.preSuf.prefix})
-            remaining.Remove(g.preSuf.prefix)
-        } else {
-            var rL []rangeList
-            for _, m := range g.members {
-                if ok := remaining.Has(m.host); !ok {
-                    continue
-                }
+	var results []leftRightRec
+	for _, g := range groupBy(sL) {
+		if g.preSuf.suffix == "None" {
+			results = append(results, leftRightRec{l: "", r: g.preSuf.prefix})
+			remaining.Remove(g.preSuf.prefix)
+		} else {
+			var rL []rangeList
+			for _, m := range g.members {
+				if ok := remaining.Has(m.host); !ok {
+					continue
+				}
 
 				numInt := m.numInt
-                low := m.numInt
-                for {
-                    newhost := fmt.Sprintf("%s%0*d%s", m.preSuf.prefix, m.numWidth,
+				low := m.numInt
+				for {
+					newhost := fmt.Sprintf("%s%0*d%s", m.preSuf.prefix, m.numWidth,
 						numInt, m.preSuf.suffix)
-                    if ok := remaining.Has(newhost); ok {
-                        remaining.Remove(newhost)
-                        numInt += 1
-                    } else {
-                        break
-                    }
-                }
-                high := numInt - 1
-                rL = append(rL, rangeList{low, high, m.numWidth})
-            }
-            needsAnotherLoop = true
-            if len(rL) == 1 && rL[0].low == rL[0].high {
-                results = append(results, leftRightRec{l: g.preSuf.prefix,
+					if ok := remaining.Has(newhost); ok {
+						remaining.Remove(newhost)
+						numInt++
+					} else {
+						break
+					}
+				}
+				high := numInt - 1
+				rL = append(rL, rangeList{low, high, m.numWidth})
+			}
+			needsAnotherLoop = true
+			if len(rL) == 1 && rL[0].low == rL[0].high {
+				results = append(results, leftRightRec{l: g.preSuf.prefix,
 					r: fmt.Sprintf("%0*d%s", rL[0].numWidth, rL[0].low, g.preSuf.suffix)})
-            } else {
-                var tmp []string
-                for _, i := range rL {
-                    tmp = append(tmp, formatRange(i.low, i.high, i.numWidth))
-                }
-                results = append(results, leftRightRec{l: g.preSuf.prefix,
-					r: fmt.Sprintf("[%s]%s", strings.Join(tmp, ","), g.preSuf.suffix) })
-            }
-        }
-    }
+			} else {
+				var tmp []string
+				for _, i := range rL {
+					tmp = append(tmp, formatRange(i.low, i.high, i.numWidth))
+				}
+				results = append(results, leftRightRec{l: g.preSuf.prefix,
+					r: fmt.Sprintf("[%s]%s", strings.Join(tmp, ","), g.preSuf.suffix)})
+			}
+		}
+	}
 
 	needsAnotherLoop = false
-    return results, needsAnotherLoop
+	return results, needsAnotherLoop
 }
 
-/*
-Expand a hostlist expression string to a slice
-
-Example: expand_hostlist("n[9-11],d[01-02]") ==>
-         ['n9', 'n10', 'n11', 'd01', 'd02']
-
-Duplicates will be removed, and the results will be sorted
-*/
+// ExpandHostList converts a pdsh style hostlist expression string to a slice
+//	of hostname strings
+//
+// Example: expand_hostlist("n[9-11],d[01-02]") ==>
+//         ['n9', 'n10', 'n11', 'd01', 'd02']
+//
+//Duplicates will be removed, and the results will be sorted
 func ExpandHostList(hostlist string) ([]string, error) {
 	var results []string
 	bracketLevel := 0
@@ -172,7 +167,7 @@ func ExpandHostList(hostlist string) ([]string, error) {
 	for _, c := range fmt.Sprintf("%s,", hostlist) {
 		if string(c) == "," && bracketLevel == 0 {
 			if len(part) > 0 {
-				r, err := ExpandPart(part)
+				r, err := expandPart(part)
 				if err != nil {
 					return []string{}, err
 				}
@@ -185,20 +180,20 @@ func ExpandHostList(hostlist string) ([]string, error) {
 		}
 
 		if string(c) == "[" {
-			bracketLevel += 1
+			bracketLevel++
 		} else if string(c) == "]" {
-			bracketLevel -= 1
+			bracketLevel--
 		}
 
 		if bracketLevel > 1 {
-			return []string{}, errors.New("Error, nested brackets.")
+			return []string{}, errors.New("nested brackets")
 		} else if bracketLevel < 0 {
-			return []string{}, errors.New("Error, unbalanced brackets.")
+			return []string{}, errors.New("unbalanced brackets")
 		}
 	}
 
 	if bracketLevel > 0 {
-		return []string{}, errors.New("Error, unbalanced brackets")
+		return []string{}, errors.New("unbalanced brackets")
 	}
 
 	// remove dups
@@ -215,7 +210,7 @@ func ExpandHostList(hostlist string) ([]string, error) {
 }
 
 // Expand a part (e.g. "x[1-2]y[1-3][1-3]") (no outer level commas).
-func ExpandPart(s string) ([]string, error) {
+func expandPart(s string) ([]string, error) {
 	if s == "" {
 		return []string{""}, nil
 	}
@@ -227,7 +222,7 @@ func ExpandPart(s string) ([]string, error) {
 	rangeList := groups[2]
 	rest := groups[3]
 
-	restExpanded, err := ExpandPart(rest)
+	restExpanded, err := expandPart(rest)
 	if err != nil {
 		return []string{}, err
 	}
@@ -236,13 +231,13 @@ func ExpandPart(s string) ([]string, error) {
 	if rangeList == "" {
 		usExpanded = []string{prefix}
 	} else {
-		usExpanded, err = ExpandRangeList(prefix, rangeList[1:len(rangeList)-1])
+		usExpanded, err = expandRangeList(prefix, rangeList[1:len(rangeList)-1])
 		if err != nil {
 			return []string{}, err
 		}
 	}
 
-	if (len(usExpanded) * len(restExpanded)) > MAX_SIZE {
+	if (len(usExpanded) * len(restExpanded)) > MaxSize {
 		return []string{}, errors.New("results too large")
 	}
 
@@ -256,10 +251,10 @@ func ExpandPart(s string) ([]string, error) {
 }
 
 // Expand a rangelist (e.g. "1-10,14"), putting a prefix before.
-func ExpandRangeList(prefix, rnglist string) ([]string, error) {
+func expandRangeList(prefix, rnglist string) ([]string, error) {
 	var results []string
 	for _, r := range strings.Split(rnglist, ",") {
-		result, err := ExpandRange(prefix, r)
+		result, err := expandRange(prefix, r)
 		if err != nil {
 			return []string{}, err
 		}
@@ -269,7 +264,7 @@ func ExpandRangeList(prefix, rnglist string) ([]string, error) {
 }
 
 // Expand a range (e.g. 1-10 or 14), putting a prefix before.
-func ExpandRange(prefix, rng string) ([]string, error) {
+func expandRange(prefix, rng string) ([]string, error) {
 	matcher := regexp.MustCompile(`^[0-9]+$`)
 
 	// single number
@@ -279,7 +274,7 @@ func ExpandRange(prefix, rng string) ([]string, error) {
 
 	matcher = regexp.MustCompile(`^([0-9]+)-([0-9]+)$`)
 	if !matcher.Match([]byte(string(rng))) {
-		return []string{}, errors.New("Malformed host string, bad range.")
+		return []string{}, errors.New("malformed host string, bad range")
 	}
 	groups := matcher.FindStringSubmatch(rng)
 
@@ -291,7 +286,7 @@ func ExpandRange(prefix, rng string) ([]string, error) {
 
 	if high < low {
 		return []string{}, errors.New("start > stop")
-	} else if (high - low) > MAX_SIZE {
+	} else if (high - low) > MaxSize {
 		return []string{}, errors.New("range too large")
 	}
 

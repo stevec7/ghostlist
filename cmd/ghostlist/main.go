@@ -3,11 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/stevec7/ghostlist/cmd/ghostlist/version"
-	"github.com/stevec7/ghostlist/pkg/ghostlist"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/stevec7/ghostlist/cmd/ghostlist/version"
+	"github.com/stevec7/ghostlist/pkg/ghostlist"
 )
 
 func main() {
@@ -29,7 +30,7 @@ func main() {
 
 		fmt.Printf("%v\n", strings.Join(result, ","))
 	} else if *collapseP != "" {
-		result, err := ghostlist.CollectHostList(*collapseP)
+		result, err := ghostlist.CollectHostList(strings.Split(*collapseP, ","))
 		if err != nil {
 			log.Fatalf("Error: %s\n", err)
 		}
@@ -37,6 +38,5 @@ func main() {
 	} else {
 		log.Fatalf("You must enter a value for the [-c|-e] args")
 	}
-
 
 }

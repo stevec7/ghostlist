@@ -11,5 +11,5 @@ clean:
 	rm dist/ghostlist
 
 test:
-	cd pkg/ghostlist && go test || (echo "Tests failed"; exit 1)
+	cd pkg/ghostlist && go test  || (echo "Tests failed"; exit 1)
 
