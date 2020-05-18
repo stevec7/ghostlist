@@ -298,3 +298,65 @@ func expandRange(prefix, rng string) ([]string, error) {
 
 	return results, nil
 }
+
+// Difference takes two hostlist strings and returns the difference between the two
+func Difference(a, b string) (string, error) {
+	_, difference, err := makeSetTypes(a, b)
+	if err != nil {
+		return "", fmt.Errorf("making sets, %s", err)
+	}
+	return difference, nil
+}
+
+// Intersection takes two hostlist strings and returns the intersection string
+func Intersection(a, b string) (string, error) {
+	intersection, _, err := makeSetTypes(a, b)
+	if err != nil {
+		return "", fmt.Errorf("making sets, %s", err)
+	}
+	return intersection, nil
+}
+
+func makeSetTypes(a, b string) (string, string, error) {
+	hostsA, err := ExpandHostList(a)
+	if err != nil {
+		return "", "", fmt.Errorf("cannot expand hostlist, %s", err)
+	}
+	hostsB, err := ExpandHostList(b)
+	if err != nil {
+		return "", "", fmt.Errorf("cannot expand hostlist, %s", err)
+	}
+
+	// dumb way to make a set
+	intersection := []string{}
+	difference := []string{}
+	hostAKeys := map[string]bool{}
+	hostBKeys := map[string]bool{}
+
+	for _, i := range hostsA {
+		hostAKeys[i] = true
+	}
+	for _, i := range hostsB {
+		hostBKeys[i] = true
+	}
+
+	for k := range hostAKeys {
+		if _, ok := hostBKeys[k]; ok {
+			intersection = append(intersection, k)
+		} else {
+			difference = append(difference, k)
+		}
+	}
+
+	inter, err := CollectHostList(intersection)
+	if err != nil {
+		return "", "", fmt.Errorf("creating hostlist, %s", err)
+	}
+
+	diff, err := CollectHostList(difference)
+	if err != nil {
+		return "", "", fmt.Errorf("creating hostlist, %s", err)
+	}
+
+	return inter, diff, nil
+}

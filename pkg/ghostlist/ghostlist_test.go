@@ -94,3 +94,41 @@ func TestEHLComplex(t *testing.T) {
 		t.Errorf("Hostlist was wrong, expected: (%v), got: (%v)", b, a)
 	}
 }
+
+func TestMakeSets(t *testing.T) {
+	a := "x[1-2]y[1-3][001-004]"
+	b := "x[1-2]y[1-3][002-004]"
+
+	_, _, err := makeSetTypes(a, b)
+	if err != nil {
+		t.Errorf("Error making sets, %s", err)
+	}
+}
+
+func TestIntersect(t *testing.T) {
+	a := "x[1-2]y[1-3][001-004]"
+	b := "x[1-2]y[1-3][002-004]"
+	expected := "x1y[1002-1004,2002-2004,3002-3004],x2y[1002-1004,2002-2004,3002-3004]"
+
+	intersect, _, err := makeSetTypes(a, b)
+	if err != nil {
+		t.Errorf("Error making sets, %s", err)
+	}
+	if intersect != expected {
+		t.Errorf("expected: %s, got: %s", expected, intersect)
+	}
+}
+
+func TestDifference(t *testing.T) {
+	a := "x[1-2]y[1-3][001-004]"
+	b := "x[1-2]y[1-3][002-004]"
+	expected := "x1y[1001,2001,3001],x2y[1001,2001,3001]"
+
+	_, diff, err := makeSetTypes(a, b)
+	if err != nil {
+		t.Errorf("Error making sets, %s", err)
+	}
+	if diff != expected {
+		t.Errorf("expected: %s, got: %s", expected, diff)
+	}
+}
