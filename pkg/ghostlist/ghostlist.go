@@ -200,11 +200,7 @@ func ExpandHostList(hostlist string) ([]string, error) {
 	results = removeDups(results)
 
 	// sort
-	err := sortHostlist(&results)
-
-	if err != nil {
-		return results, err
-	}
+	sortHostlist(&results)
 
 	return results, nil
 }
